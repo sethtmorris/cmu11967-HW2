@@ -46,7 +46,7 @@ def random_batch_sampler(
     """
 
     while True:
-        yield ...
+        yield (tokens[start_index:start_index + seq_len] for start_index in torch.randint(0, len(tokens) - seq_len, (batch_size,), generator=torch.Generator(), device=device)) #torch.LongTensor(batch_size * tokens.randperm(seq_len)[:batch_size]).to(device) # torch.LongTensor(batch_size * sample_tensor(tokens, seq_len)) # 
 
 
 def sequential_batch_sampler(
