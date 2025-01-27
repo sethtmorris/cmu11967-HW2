@@ -46,7 +46,7 @@ def random_batch_sampler(
     """
 
     while True:
-        yield (tokens[start_index:start_index + seq_len] for start_index in torch.randint(0, len(tokens) - seq_len, (batch_size,), generator=torch.Generator(), device=device)) #torch.LongTensor(batch_size * tokens.randperm(seq_len)[:batch_size]).to(device) # torch.LongTensor(batch_size * sample_tensor(tokens, seq_len)) # 
+        yield torch.tensor(list(tokens[start_index:(start_index + seq_len)] for start_index in list(torch.randint(0, len(tokens) - seq_len, (batch_size,), device=device)))) # torch.LongTensor(batch_size * tokens.randperm(seq_len)[:batch_size]).to(device) # torch.LongTensor(batch_size * sample_tensor(tokens, seq_len)) # 
 
 
 def sequential_batch_sampler(
@@ -71,8 +71,8 @@ def sequential_batch_sampler(
         the last batch.
     """
 
-    for batch in ...:
-        yield ...
+    for batch in torch.reshape(torch.tensor(torch.split(tokens, batch_size*seq_len)), (batch_size, seq_len)): #range(0, tokens.size(dim=0) - seq_len, seq_len):
+        yield batch.to(device)
 
 
 def cosine_lr_schedule(
