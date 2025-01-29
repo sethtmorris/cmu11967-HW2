@@ -105,11 +105,12 @@ def cosine_lr_schedule(
         assert num_training_steps >= num_warmup_steps >= 0
 
         if t <= num_warmup_steps:
-            lr = ...
+            lr = max_lr * t / num_warmup_steps
         elif t >= num_training_steps:
-            lr = ...
+            lr = min_lr
         else:  # t >= num_training_steps
-            lr = ...
+            #print(str((t-num_warmup_steps)/(num_training_steps-num_warmup_steps)))
+            lr = 0.5 * (max_lr - min_lr) * (1 + np.cos(np.pi * (t - num_warmup_steps)/(num_training_steps-num_warmup_steps))) + min_lr
         return lr
 
     return get_lr
