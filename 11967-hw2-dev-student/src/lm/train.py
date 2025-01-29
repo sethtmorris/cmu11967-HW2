@@ -47,9 +47,11 @@ def random_batch_sampler(
     """
 
     while True:
-        random_indeces = torch.randint(0, tokens.size(dim=1) - batch_size*seq_len, (tokens.size(dim=1),)) #.item()
-        yield next(iter(torch.reshape(tokens[random_index:random_index+batch_size*seq_len], (batch_size, seq_len)) for random_index in random_indeces)) #torch.reshape(tokens, (-1, batch_size, seq_len)) #torch.reshape(next(iter(DataLoader(tokens, batch_size=seq_len*batch_size, shuffle=True))), (batch_size, seq_len)) #torch.tensor(list(tokens[start_index:(start_index + seq_len)] for start_index in list(torch.randint(0, len(tokens) - seq_len, (batch_size,), device=device)))) # torch.LongTensor(batch_size * tokens.randperm(seq_len)[:batch_size]).to(device) # torch.LongTensor(batch_size * sample_tensor(tokens, seq_len)) # 
-
+        if tokens.size(dim=0) >= batch_size*seq_len:
+            random_index = torch.randint(0, tokens.size(dim=0) - batch_size*seq_len, (1,)).item()
+            yield torch.reshape(tokens[random_index:random_index+batch_size*seq_len], (batch_size, seq_len)).to(device) #torch.reshape(tokens, (-1, batch_size, seq_len)) #torch.reshape(next(iter(DataLoader(tokens, batch_size=seq_len*batch_size, shuffle=True))), (batch_size, seq_len)) #torch.tensor(list(tokens[start_index:(start_index + seq_len)] for start_index in list(torch.randint(0, len(tokens) - seq_len, (batch_size,), device=device)))) # torch.LongTensor(batch_size * tokens.randperm(seq_len)[:batch_size]).to(device) # torch.LongTensor(batch_size * sample_tensor(tokens, seq_len)) # 
+        else:
+            yield tokens.to(device)
 
 def sequential_batch_sampler(
     tokens: torch.LongTensor, device: str, batch_size: int, seq_len: int
@@ -79,7 +81,7 @@ def sequential_batch_sampler(
     #    yield torch.reshape(batch, (batch_size, seq_len))
     batches = tokens.size(0) // (batch_size*seq_len)
     for batch in torch.reshape(tokens[0:batches*batch_size*seq_len], (batches, batch_size, seq_len)):
-        yield batch
+        yield batch.to(device)
 
 def cosine_lr_schedule(
     num_warmup_steps: int,
