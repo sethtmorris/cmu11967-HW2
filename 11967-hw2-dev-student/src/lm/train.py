@@ -25,7 +25,8 @@ from lm.utils import (
     enable_tf32,
     estimate_model_disk_size,
 )
-
+#from torch.utils.data import DataLoader
+#import random
 
 def random_batch_sampler(
     tokens: torch.LongTensor, device: str, batch_size: int, seq_len: int
@@ -46,7 +47,8 @@ def random_batch_sampler(
     """
 
     while True:
-        yield torch.tensor(list(tokens[start_index:(start_index + seq_len)] for start_index in list(torch.randint(0, len(tokens) - seq_len, (batch_size,), device=device)))) # torch.LongTensor(batch_size * tokens.randperm(seq_len)[:batch_size]).to(device) # torch.LongTensor(batch_size * sample_tensor(tokens, seq_len)) # 
+        random_indeces = torch.randint(0, tokens.size(dim=1) - batch_size*seq_len, (tokens.size(dim=1),)) #.item()
+        yield next(iter(torch.reshape(tokens[random_index:random_index+batch_size*seq_len], (batch_size, seq_len)) for random_index in random_indeces)) #torch.reshape(tokens, (-1, batch_size, seq_len)) #torch.reshape(next(iter(DataLoader(tokens, batch_size=seq_len*batch_size, shuffle=True))), (batch_size, seq_len)) #torch.tensor(list(tokens[start_index:(start_index + seq_len)] for start_index in list(torch.randint(0, len(tokens) - seq_len, (batch_size,), device=device)))) # torch.LongTensor(batch_size * tokens.randperm(seq_len)[:batch_size]).to(device) # torch.LongTensor(batch_size * sample_tensor(tokens, seq_len)) # 
 
 
 def sequential_batch_sampler(
@@ -71,9 +73,13 @@ def sequential_batch_sampler(
         the last batch.
     """
 
-    for batch in torch.reshape(torch.tensor(torch.split(tokens, batch_size*seq_len)), (batch_size, seq_len)): #range(0, tokens.size(dim=0) - seq_len, seq_len):
-        yield batch.to(device)
-
+#    for batch in torch.reshape(torch.tensor(torch.split(tokens, batch_size*seq_len)), (batch_size, seq_len)): #range(0, tokens.size(dim=0) - seq_len, seq_len):
+#        yield batch.to(device)
+    #for batch in DataLoader(tokens, batch_size=seq_len*batch_size, shuffle=True):
+    #    yield torch.reshape(batch, (batch_size, seq_len))
+    batches = tokens.size(0) // (batch_size*seq_len)
+    for batch in torch.reshape(tokens[0:batches*batch_size*seq_len], (batches, batch_size, seq_len)):
+        yield batch
 
 def cosine_lr_schedule(
     num_warmup_steps: int,
