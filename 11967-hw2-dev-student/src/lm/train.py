@@ -25,8 +25,7 @@ from lm.utils import (
     enable_tf32,
     estimate_model_disk_size,
 )
-#from torch.utils.data import DataLoader
-#import random
+
 
 def random_batch_sampler(
     tokens: torch.LongTensor, device: str, batch_size: int, seq_len: int
@@ -135,10 +134,11 @@ def compute_language_modeling_loss(
 
     Hint: Think about what are the groundtruth labels for next token prediction.
     """
-
-    labels = ...
-    logits = ...
-    return ...
+    print(input_ids)
+    labels = input_ids[1:]
+    print(logits)
+    logits = logits[:-1]
+    return F.cross_entropy(logits[0], labels[0]) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
 
 
 def train(
@@ -168,15 +168,15 @@ def train(
 
     for step in (pbar := trange(num_training_steps)):
         t0 = time.time()
-        lr = ...
+        lr = lr_schedule(step)
         set_lr(optimizer, lr)
 
         for _ in range(grad_accumulation_steps):
             # TODO: sample a batch, generate logits and compute loss
-            input_ids = ...
+            input_ids = next(iter(batch_sampler))
             with autocast:
-                logits = ...
-            loss = ...
+                logits = model(input_ids)
+            loss = compute_language_modeling_loss(input_ids, logits)
             (loss / grad_accumulation_steps).backward()
             loss_f = loss.item()
             losses.append(loss_f)
