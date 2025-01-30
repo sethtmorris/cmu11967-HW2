@@ -138,7 +138,7 @@ def compute_language_modeling_loss(
     labels = input_ids[:,1:]
     print(logits)
     logits = logits[:,:-1]
-    return torch.tensor(np.mean([F.cross_entropy(logits[batch], labels[batch]) for batch in range(input_ids.size(0))])) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
+    return torch.tensor(torch.mean(torch.tensor([F.cross_entropy(logits[batch], labels[batch]) for batch in range(input_ids.size(0))]))) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
 
 
 def train(
@@ -173,11 +173,14 @@ def train(
 
         for _ in range(grad_accumulation_steps):
             # TODO: sample a batch, generate logits and compute loss
-            input_ids = next(iter(batch_sampler))
+            input_ids = torch.tensor(next(batch_sampler))
+            if len(list(input_ids.shape)) == 1:
+            	input_ids = torch.reshape(input_ids, (-1, input_ids.size(-1)))
             with autocast:
                 logits = model(input_ids)
             loss = compute_language_modeling_loss(input_ids, logits)
-            (loss / grad_accumulation_steps).backward()
+            lossdgasteps = torch.tensor((loss / grad_accumulation_steps), requires_grad=True)
+            lossdgasteps.backward()
             loss_f = loss.item()
             losses.append(loss_f)
 
