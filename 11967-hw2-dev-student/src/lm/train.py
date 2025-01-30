@@ -134,11 +134,11 @@ def compute_language_modeling_loss(
 
     Hint: Think about what are the groundtruth labels for next token prediction.
     """
-    print(input_ids)
+    #print(input_ids)
     labels = input_ids[:,1:]
-    print(logits)
+    #print(logits)
     logits = logits[:,:-1]
-    return torch.tensor(torch.mean(torch.tensor([F.cross_entropy(logits[batch], labels[batch]) for batch in range(input_ids.size(0))]))) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
+    return torch.tensor(torch.mean(torch.tensor([F.cross_entropy(logits[batch], labels[batch]) for batch in range(input_ids.size(0))])), requires_grad=True) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
 
 
 def train(
@@ -169,6 +169,7 @@ def train(
     for step in (pbar := trange(num_training_steps)):
         t0 = time.time()
         lr = lr_schedule(step)
+        print(lr)
         set_lr(optimizer, lr)
 
         for _ in range(grad_accumulation_steps):
@@ -179,8 +180,9 @@ def train(
             with autocast:
                 logits = model(input_ids)
             loss = compute_language_modeling_loss(input_ids, logits)
-            lossdgasteps = torch.tensor((loss / grad_accumulation_steps), requires_grad=True)
-            lossdgasteps.backward()
+            #lossdgasteps = torch.tensor((loss / grad_accumulation_steps), requires_grad=True)
+            print(loss)
+            (loss / grad_accumulation_steps).backward()
             loss_f = loss.item()
             losses.append(loss_f)
 
