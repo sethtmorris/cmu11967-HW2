@@ -135,10 +135,10 @@ def compute_language_modeling_loss(
     Hint: Think about what are the groundtruth labels for next token prediction.
     """
     print(input_ids)
-    labels = input_ids[1:]
+    labels = input_ids[:,1:]
     print(logits)
-    logits = logits[:-1]
-    return F.cross_entropy(logits[0], labels[0]) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
+    logits = logits[:,:-1]
+    return torch.tensor(np.mean([F.cross_entropy(logits[batch], labels[batch]) for batch in range(input_ids.size(0))])) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
 
 
 def train(
