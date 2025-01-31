@@ -135,13 +135,21 @@ def compute_language_modeling_loss(
     Hint: Think about what are the groundtruth labels for next token prediction.
     """
     #print(input_ids)
-    labels = torch.squeeze(input_ids[:, 1:])
+    labels = torch.flatten(input_ids[:, 1:], start_dim=0, end_dim=1) #torch.squeeze(input_ids[:, 1:], dim=0)
     print(labels)
     #print(logits)
-    logits = torch.squeeze(logits[:, :labels.size(-1)]) #.requires_grad_(True)
+    logits = torch.flatten(logits[:, :labels.size(-1), :], start_dim=0, end_dim=1) #torch.squeeze(logits[:, :labels.size(-1), :], dim=0) #.requires_grad_(True)
     print(logits)
+    needed_pad = logits.size(-2) - labels.size(-1)
+    print(needed_pad)
+    #labels = F.pad(input=labels, pad=(0, needed_pad), mode='constant', value=0)
+    print(labels)
+    #logits = F.pad(input=logits, pad=(0, 0, 0, needed_pad), mode='constant', value=0)
+    #print(logits)
     ces = torch.nn.CrossEntropyLoss()
-    return ces(logits, labels) #for batch in range(labels.size(0))] #torch.mean(torch.tensor([F.cross_entropy(logits[batch], labels[batch]) for batch in range(input_ids.size(0))])) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
+    #loss = torch.FloatTensor([0.])
+    loss = ces(logits[:labels.size(-1), :], labels) #for batch in range(labels.size(0))] #torch.mean(torch.tensor([F.cross_entropy(logits[batch], labels[batch]) for batch in range(input_ids.size(0))])) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
+    return loss
 
 
 def train(
