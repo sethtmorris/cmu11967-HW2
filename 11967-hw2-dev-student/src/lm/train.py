@@ -135,10 +135,13 @@ def compute_language_modeling_loss(
     Hint: Think about what are the groundtruth labels for next token prediction.
     """
     #print(input_ids)
-    labels = input_ids[:,1:]
+    labels = torch.squeeze(input_ids[:, 1:])
+    print(labels)
     #print(logits)
-    logits = logits[:,:-1]
-    return torch.tensor(torch.mean(torch.tensor([F.cross_entropy(logits[batch], labels[batch]) for batch in range(input_ids.size(0))])), requires_grad=True) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
+    logits = torch.squeeze(logits[:, :labels.size(-1)]) #.requires_grad_(True)
+    print(logits)
+    ces = torch.nn.CrossEntropyLoss()
+    return ces(logits, labels) #for batch in range(labels.size(0))] #torch.mean(torch.tensor([F.cross_entropy(logits[batch], labels[batch]) for batch in range(input_ids.size(0))])) #, ignore_index=-1) #F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-1)
 
 
 def train(
@@ -163,6 +166,13 @@ def train(
         grad_accumulation_steps: number of "micro" training steps before each
           gradient update
     """
+    #print(next(iter(model.parameters())))
+    #print(next(iter(model.parameters())))
+    #print(next(iter(model.parameters())))
+    #print(next(iter(model.parameters())))
+    #print(next(iter(model.parameters())))
+    # optimizer.add_param_group(model.parameters())
+
     # stores training losses for the 20 latest steps
     losses = deque(maxlen=20 * grad_accumulation_steps)
 
@@ -181,12 +191,16 @@ def train(
                 logits = model(input_ids)
             loss = compute_language_modeling_loss(input_ids, logits)
             #lossdgasteps = torch.tensor((loss / grad_accumulation_steps), requires_grad=True)
-            print(loss)
+            #loss.requires_grad_(requires_grad=True)
+            #print(loss)
             (loss / grad_accumulation_steps).backward()
             loss_f = loss.item()
             losses.append(loss_f)
+            #print(next(iter(model.parameters())).grad)
 
         # TODO: update the model using the accumulated gradients
+        optimizer.step()
+        optimizer.zero_grad()
         loss_mean = np.mean(losses).item()
 
         FLOPs_per_step = (
