@@ -136,14 +136,14 @@ def compute_language_modeling_loss(
     """
     #print(input_ids)
     labels = torch.flatten(input_ids[:, 1:], start_dim=0, end_dim=1) #torch.squeeze(input_ids[:, 1:], dim=0)
-    print(labels)
+    #print(labels)
     #print(logits)
     logits = torch.flatten(logits[:, :labels.size(-1), :], start_dim=0, end_dim=1) #torch.squeeze(logits[:, :labels.size(-1), :], dim=0) #.requires_grad_(True)
-    print(logits)
-    needed_pad = logits.size(-2) - labels.size(-1)
-    print(needed_pad)
+    #print(logits)
+    #needed_pad = logits.size(-2) - labels.size(-1)
+    #print(needed_pad)
     #labels = F.pad(input=labels, pad=(0, needed_pad), mode='constant', value=0)
-    print(labels)
+    #print(labels)
     #logits = F.pad(input=logits, pad=(0, 0, 0, needed_pad), mode='constant', value=0)
     #print(logits)
     ces = torch.nn.CrossEntropyLoss()
@@ -174,11 +174,8 @@ def train(
         grad_accumulation_steps: number of "micro" training steps before each
           gradient update
     """
-    #print(next(iter(model.parameters())))
-    #print(next(iter(model.parameters())))
-    #print(next(iter(model.parameters())))
-    #print(next(iter(model.parameters())))
-    #print(next(iter(model.parameters())))
+    #for parameter in model.parameters():
+    #    print(parameter.device)
     # optimizer.add_param_group(model.parameters())
 
     # stores training losses for the 20 latest steps
@@ -187,12 +184,12 @@ def train(
     for step in (pbar := trange(num_training_steps)):
         t0 = time.time()
         lr = lr_schedule(step)
-        print(lr)
+        #print(lr)
         set_lr(optimizer, lr)
 
         for _ in range(grad_accumulation_steps):
             # TODO: sample a batch, generate logits and compute loss
-            input_ids = torch.tensor(next(batch_sampler))
+            input_ids = next(batch_sampler)
             if len(list(input_ids.shape)) == 1:
             	input_ids = torch.reshape(input_ids, (-1, input_ids.size(-1)))
             with autocast:
@@ -269,7 +266,10 @@ def main():
     # initialize tokenizer and model
     tokenizer = tiktoken.get_encoding(config.tokenizer_encoding)
     device = determine_device() if config.device == "auto" else config.device
+    #print(determine_device())
+    #device = torch.device("cuda")
     model = DecoderLM(tokenizer.n_vocab, **config.model_config).to(device)
+    # if torch.cuda.is_available(): model.to(torch.device("cuda"))
     print(f"model parameters = {count_params(model) / 1e6:.0f}M")
 
     model_disk_size_MB = estimate_model_disk_size(model) * 1e-6
