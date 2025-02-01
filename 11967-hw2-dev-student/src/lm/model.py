@@ -103,9 +103,9 @@ class MultiHeadAttention(nn.Module):
 
         Hint: torch.triu or torch.tril
         """
-        causal_mask = torch.tril(torch.full((list(q.shape)[2], list(q.shape)[2]), True)) #...
+        causal_mask = torch.tril(torch.full((list(q.shape)[2], list(q.shape)[2]), True)).to(q.device) #...
         #print(causal_mask)
-        causal_mask.to(q.device)
+        #causal_mask.to(q.device)
         """
         Sometimes, we want to pad the input sequences so that they have the same
         length and can fit into the same batch. These padding tokens should not
@@ -146,13 +146,13 @@ class MultiHeadAttention(nn.Module):
 
         if attention_mask is None:
             mask = causal_mask
-            #mask.to(q.device)
+            mask = mask.to(unmasked_attn_logits.device)
         else:
             #print(causal_mask.shape)
             #print(attention_mask.shape)
-            mask = torch.einsum('ij,kj->kij', causal_mask.float(), attention_mask)
+            mask = torch.einsum('ij,kj->kij', causal_mask.float(), attention_mask).to(unmasked_attn_logits.device)
             #mask = mask.unsqueeze(1).repeat(1, list(unmasked_attn_logits.shape)[1], 1)
-            mask = repeat(mask, 'a c d -> a b c d', b=list(unmasked_attn_logits.shape)[1])
+            mask = repeat(mask, 'a c d -> a b c d', b=unmasked_attn_logits.size(1)).to(unmasked_attn_logits.device)
             #mask.to(q.device)
         #print(mask.shape)
         #mask.to(q.device)
@@ -163,11 +163,12 @@ class MultiHeadAttention(nn.Module):
         """
         float_min = torch.finfo(q.dtype).min
         #print(unmasked_attn_logits.shape)
-        attn_logits = unmasked_attn_logits.masked_fill(torch.logical_not(mask.to(unmasked_attn_logits.device)), float_min)
+        attn_logits = unmasked_attn_logits.masked_fill(torch.logical_not(mask), float_min)
         #print(attn_logits)
         attn_weights = attn_logits.softmax(dim=-1) # ...
         #print(attn_weights)
         attn_weights = self.dropout(attn_weights)
+        attn_weights = attn_weights.to(v.device)
         #print(attn_weights)
 
         # scale value by the attention weights.
@@ -346,18 +347,19 @@ class DecoderLM(nn.Module):
 
         assert input_ids.shape[1] <= self.n_positions
         token_embeddings = self.token_embeddings(input_ids)
-        token_embeddings.to(input_ids.device) # ...
+        token_embeddings = token_embeddings.to(input_ids.device) # ...
 
         if attention_mask is not None:
             #print(attention_mask)
-            attention_mask.to(input_ids.device)
+            attention_mask = attention_mask.to(input_ids.device)
             position_ids = torch.sub(torch.cumsum(attention_mask, dim=1), 1)
             #print(position_ids)
         else:
-            position_ids = torch.arange(list(input_ids.shape)[1]).repeat(list(input_ids.shape)[0], 1)
+            position_ids = torch.arange(input_ids.size(1), device=input_ids.device).repeat(input_ids.size(0), 1)
             #print(position_ids)
         #print(self.position_embeddings.weight)
-        positional_embeddings = F.embedding(position_ids.int().to(input_ids.device), self.position_embeddings.weight.to(input_ids.device)) # ...
+        positional_embeddings = self.position_embeddings(position_ids.int()) #F.embedding(position_ids.int().to(input_ids.device), self.position_embeddings.weight.to(input_ids.device)) # ...
+        positional_embeddings = positional_embeddings.to(token_embeddings.device)
         #print(positional_embeddings)
 
         return self.dropout(token_embeddings + positional_embeddings)
